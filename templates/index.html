@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bargain Hunter Chatbot</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f3f4f6;
+      background-image: url("{{ url_for('static', filename='download.jpeg') }}");
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 32rem;
+      margin: 1rem;
+      background: rgba(95, 112, 137, 0.53);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .container:hover {
+      background: #5f7089;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      transform: translateY(-2px);
+    }
+
+    #chatbox {
+      max-height: 60vh;
+      border: 1px solid #d1d5db;
+      overflow-y: auto;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      text-align: left;
+      background-color: #fafafa;
+      border-radius: 0.5rem;
+      scrollbar-width: thin;
+      scrollbar-color: #9ca3af #f3f4f6;
+    }
+
+    .user-message {
+      color: #ffffff;
+      background: #4f46e5;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin: 0.5rem 0;
+      max-width: 80%;
+      margin-left: auto;
+      word-wrap: break-word;
+    }
+
+    .bot-message {
+      color: #1f2937;
+      background-color: #e5e7eb;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin: 0.5rem 0;
+      max-width: 80%;
+      margin-right: auto;
+      word-wrap: break-word;
+    }
+
+    .options {
+      margin: 0.5rem 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid #d1d5db;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.5);
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: #4338ca;
+      transform: scale(1.02);
+    }
+
+    .option-btn {
+      margin: 0.25rem;
+      background-color: #3b82f6;
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .option-btn:hover {
+      background-color: #2563eb;
+      transform: scale(1.05);
+    }
+
+    .typing-indicator {
+      color: #4b5563;
+      font-style: italic;
+      margin: 0.5rem 0;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .typing-indicator.active {
+      opacity: 1;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .error-message {
+      background-color: #fecaca;
+      color: #991b1b;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        margin: 0.5rem;
+        padding: 1rem;
+      }
+      
+      input[type="text"] {
+        padding: 0.5rem;
+      }
+      
+      button {
+        padding: 0.5rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 container">
+    <div class="flex items-center justify-between gap-3 mb-6">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🤖</span>
+        <h2 class="text-2xl font-bold text-gray-800">Bargain Hunter Bot</h2>
+      </div>
+      <button 
+        onclick="clearChat()" 
+        class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors text-sm"
+      >
+        Clear Chat
+      </button>
+    </div>
+    
+    <div id="chatbox" class="chat-container flex flex-col">
+      <div class="chat-bubble bot-message fade-in">
+        <strong>Bot:</strong> Hello! Welcome to Bargain Hunter Bot. Ask me about deals (e.g., 'best mobile deals') or say hi!
+      </div>
+    </div>
+    
+    <div id="typing-indicator" class="typing-indicator">Bot is typing...</div>
+    
+    <div class="mt-6 flex gap-2">
+      <input 
+        type="text" 
+        id="userInput" 
+        placeholder="Type your query (e.g., 'best laptop deals')..." 
+        class="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        autofocus
+      >
+      <button 
+        onclick="sendMessage()" 
+        class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+      >
+        ➤
+      </button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('userInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    function sendMessage(userMessage = null) {
+      if (!userMessage) {
+        userMessage = document.getElementById('userInput').value.trim();
+        if (!userMessage) return;
+      }
+      
+      let chatbox = document.getElementById('chatbox');
+      const userMsg = document.createElement('div');
+      userMsg.className = 'chat-bubble user-message fade-in';
+      userMsg.innerHTML = `<strong>You:</strong> ${userMessage}`;
+      chatbox.appendChild(userMsg);
+      
+      document.getElementById('userInput').value = '';
+      showTypingIndicator(true);
+
+      fetch('/get_deal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ "message": userMessage })
+      })
+      .then(response => response.json())
+      .then(data => {
+        showTypingIndicator(false);
+        let botResponseHtml = data.reply.replace(/\\n/g, '<br>');
+        const botMsg = document.createElement('div');
+        botMsg.className = 'chat-bubble bot-message fade-in';
+        botMsg.innerHTML = `<strong>Bot:</strong> ${botResponseHtml}`;
+        chatbox.appendChild(botMsg);
+
+        if (data.options) {
+          const optionsDiv = document.createElement('div');
+          optionsDiv.className = 'options flex flex-wrap gap-2 my-2 fade-in';
+          optionsDiv.innerHTML = data.options.map(option => `
+            <button 
+              class="option-btn bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-transform"
+              onclick="sendMessage('${option}')"
+            >
+              ${option}
+            </button>
+          `).join('');
+          chatbox.appendChild(optionsDiv);
+        }
+        
+        chatbox.scrollTo({ top: chatbox.scrollHeight, behavior: 'smooth' });
+      })
+      .catch(error => {
+        showTypingIndicator(false);
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'chat-bubble bot-message error-message fade-in';
+        errorMsg.innerHTML = `<strong>Bot:</strong> Oops! Something went wrong: ${error.message}. Please try again.`;
+        chatbox.appendChild(errorMsg);
+        chatbox.scrollTo({ top: chatbox.scrollHeight, behavior: 'smooth' });
+      });
+    }
+
+    function showTypingIndicator(show) {
+      const indicator = document.getElementById('typing-indicator');
+      indicator.classList.toggle('active', show);
+    }
+
+    function clearChat() {
+      const chatbox = document.getElementById('chatbox');
+      chatbox.innerHTML = `
+        <div class="chat-bubble bot-message fade-in">
+          <strong>Bot:</strong> Hello! Welcome to Bargain Hunter Bot. Ask me about deals (e.g., 'best mobile deals') or say hi!
+        </div>
+      `;
+      showTypingIndicator(false);
+    }
+  </script>
+</body>
+</html>
