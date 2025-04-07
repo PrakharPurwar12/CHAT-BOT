@@ -60,7 +60,7 @@ def get_deal():
     ai_response = analyze_query_with_gemini(user_input)
     
     # Check for greetings
-    if any(word in ai_response.lower() for word in ["hello", "hi", "hey"]):
+    if any(ai_response.lower().startswith(word) for word in ["hello", "hi", "hey"]):
         return jsonify({
             "reply": ai_response,
             "options": list(category_mappings.values())
@@ -87,7 +87,7 @@ def get_deal():
                 f"<tr>"
                 f"<td>{d.get('Brand', 'Unknown')}</td>"
                 f"<td>{d.get('Product', 'N/A')}</td>"
-                f"<td>₹{d.get('Price', 'N/A')}</td>"
+                f"<td>₹{d.get('Price', 'N/A').strip("₹")}</td>"
                 f"<td>{d.get('Discount', 'N/A')}</td>"
                 f"<td>{d.get('Rating', 'N/A')} ⭐</td>"
                 f"<td>{d.get('Store', 'Unavailable')}</td>"
