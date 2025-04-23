@@ -5,7 +5,7 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # Configure Google Gemini API Key
-genai.configure(api_key="AIzaSyD2z3gmpyTx74yKh0z5YvkMTcoygUGf5r0")
+genai.configure(api_key="Your APi Key")
 
 
 # Define category mappings
