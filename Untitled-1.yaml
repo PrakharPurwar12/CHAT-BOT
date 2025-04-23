@@ -1,0 +1,4 @@
+curl https://api.openai.com/v1/responses -H "Content-Type: application/json"  -H "Authorization: Bearer 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"  -d "{   \"model\": \"gpt-4o\",    \"input\": \"Tell me a three sentence bedtime story about a unicorn." }'
+
+
+curl https://api.openai.com/v1/chat/completions -H "Content-Type: application/json" -H "Authorization: Bearer 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" -d "{ \"model\": \"gpt-4o\", \"messages\": [{\"role\": \"user\", \"content\": \"Tell me a three sentence bedtime story about a unicorn.\"}] }"

@@ -1,19 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 import json
 import google.generativeai as genai
-from fuzzywuzzy import process
 
 app = Flask(__name__)
 
 # Configure Google Gemini API Key
 genai.configure(api_key="AIzaSyD2z3gmpyTx74yKh0z5YvkMTcoygUGf5r0")
 
-# Load deals data
-try:
-    with open('data/deals.json', encoding='utf-8') as f:
-        deals = json.load(f)
-except (FileNotFoundError, json.JSONDecodeError):
-    deals = []
 
 # Define category mappings
 category_mappings = {
@@ -22,6 +15,7 @@ category_mappings = {
     "accessories": "Accessories Deals"
 }
 
+
 def analyze_query_with_gemini(user_input):
     """
     Uses Google's Gemini API to analyze user queries.
@@ -29,14 +23,16 @@ def analyze_query_with_gemini(user_input):
     """
     prompt = f"""
     You are a smart shopping assistant. Answer user queries conversationally.
-    If the query is about product deals (e.g., 'best mobile deals', 'laptop under 50000'),
-    return ONLY the product category (mobile, laptop, accessories), Brand,Product,	Price,Discount,Rating,Store(flipkart, amazon,croma,Reliance Digital) and their urls to buy  json without extra text.
-    
-    If the query is a greeting (like 'hi' or 'hello'), respond with a friendly greeting and suggest available deals.
-    
+    If the query is about product deals (e.g., 'best mobile deals', 'laptop under 50000'),
+    return the json list where easch elements contains ONLY the "product_category" of type (mobile, laptop, accessories), "brand" of type string,
+    "product" of type string, "price" of type string, "discount" of type string,"rating" of type string,
+    "store" of type string (flipkart, amazon,croma,Reliance Digital) if more than one store then add new entry in list and their "urls" of type string to buy in json format without any extra text.
+
+    If the query is a greeting (like 'hi' or 'hello' or 'thank you'), respond with a friendly greeting and suggest available deals.
+
     User Query: "{user_input}"
     """
-    
+    print(prompt)
     try:
         model = genai.GenerativeModel("gemini-1.5-pro")
         response = model.generate_content(prompt)
@@ -46,60 +42,74 @@ def analyze_query_with_gemini(user_input):
             return "Sorry, I've hit my query limit for now. Try again later or ask something simple!"
         return "Sorry, I encountered an error processing your request. Try again later."
 
+
 @app.route('/')
 def home():
     return render_template('index.html')
 
+def get_urls(data):
+    url = data.get('url', '')
+    brand = data.get('brand', '')
+    product = data.get('product', '')
+    price = str(data.get('price', '')).strip("₹").replace(",", "")
+    if "flipkart" in url.lower():
+        url = "https://www.flipkart.com/search?q="+brand+"+"+product.replace(" ", "+") + "&p%5B%5D=facets.price_range.from%3D"+str(int(price)-10)+"&p%5B%5D=facets.price_range.to%3DMax"
+    elif "amazon" in url.lower():
+        url = "https://www.amazon.in/s?k="+brand+"+"+product.replace(" ", "+") + "&low-price="+price
+    elif "reliancedigital" in url.lower():
+        url = "https://www.reliancedigital.in/products?q=" +brand+"+"+product.replace(" ", "+") + "&min_price_effective=%5B" +str(int(price)-10) + ",INR%20TO%20"+str(int(price)+5000) +",INR%5D"
+    elif "croma" in url.lower():
+        url = "https://www.croma.com/searchB?q=" +brand+"%20"+product.replace(" ", "%20") + "%3Arelevance&text="+ brand+"%20"+product.replace(" ", "%20")
+    return url
 @app.route('/get_deal', methods=['POST'])
 def get_deal():
     user_input = request.json.get('message', '').strip().lower()
-    
     if not user_input:
         return jsonify({"reply": "❌ Please enter a valid query."})
-    
+
     ai_response = analyze_query_with_gemini(user_input)
-    
+    try:
+        ai_response = json.loads(ai_response.strip("```").strip("json"))
+    except:
+        ai_response = {"greeting": ai_response}
     # Check for greetings
-    if any(ai_response.lower().startswith(word) for word in ["hello", "hi", "hey"]):
-        return jsonify({
-            "reply": ai_response,
-            "options": list(category_mappings.values())
-        })
-    ai_response = json.loads(ai_response.strip("```").strip("json"))
-    # Match Gemini output with category mappings using fuzzy matching
-    # match = process.extractOne(ai_response.lower(), category_mappings.keys(), score_cutoff=70)
-    # if match is None:  # Handle case where no match is found
-    #     return jsonify({"reply": "<p style='color: red; font-weight: bold;'>❌ I didn’t understand that. Try asking about mobile, laptop, or accessories deals!</p>"})
-    
-    # best_match, score = match
-    # selected_category = category_mappings.get(best_match)
-    
-    # Find matching deals
-    # matching_deals = [d for d in deals if selected_category and d["category"].lower() == best_match]
-    
-    if 1==1:
+    if type(ai_response) == dict:
+        if any(ai_response.get("greeting", "not found").lower().startswith(word) for word in
+               ["hello", "hi", "hey", "thank you", "you're welcome!"]):
+            
+            return jsonify({
+                "reply": ai_response.get("greeting", "hello"),
+                "options": list(category_mappings.values())
+            })
+    print(ai_response)
+
+    if 1 == 1:
         response = f"<h3 class='text-xl font-bold text-red-600 mb-2'>🔥 Exclusive ! 🔥</h3>"
         response += "<table border='1' style='width:100%; border-collapse: collapse; text-align: center;'>"
         response += "<tr><th>Brand</th><th>Product</th><th>Price</th><th>Discount</th><th>Rating</th><th>Store</th></tr>"
-        
+
         for d in ai_response:
+            if not type(d) == dict:
+                d = dict()
+
             response += (
                 f"<tr>"
-                f"<td>{d.get('Brand', 'Unknown')}</td>"
-                f"<td>{d.get('Product', 'N/A')}</td>"
-                f"<td>₹{d.get('Price', 'N/A').strip("₹")}</td>"
-                f"<td>{d.get('Discount', 'N/A')}</td>"
-                f"<td>{d.get('Rating', 'N/A')} ⭐</td>"
-                f"<td>{d.get('Store', 'Unavailable')}</td>"
-                f"<td><a href='{d.get('url', '#')}' target='_blank'>Buy Now</a></td>"
+                f"<td>{d.get('brand', 'Unknown')}</td>"
+                f"<td>{d.get('product', 'N/A')}</td>"
+                f"<td>₹{str(d.get('price', 11000)).strip('₹')}</td>"
+                f"<td>{d.get('discount', 'N/A')}</td>"
+                f"<td>{d.get('rating', 'N/A')} ⭐</td>"
+                f"<td>{d.get('store', 'Unavailable')}</td>"
+                f"<td><a href='{get_urls(d)}' target='_blank'>Buy Now</a></td>"
                 f"</tr>"
             )
         response += "</table>"
     else:
         response = "<p style='color: red; font-weight: bold;'>❌ No matching deals found. Try another query!</p>"
-    
+    print(response)
     return jsonify({"reply": response})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
-
+    #get_deal()
