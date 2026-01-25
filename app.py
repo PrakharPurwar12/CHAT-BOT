@@ -1,11 +1,13 @@
 from flask import Flask, render_template, request, jsonify
 import json
 import google.generativeai as genai
+# import os
+
 
 app = Flask(__name__)
 
 # Configure Google Gemini API Key
-genai.configure(api_key="Your APi Key")
+genai.configure(api_key="AIzaSyDzcFCqmAyLICIVTORsKwpdrbR7TMQzmPg")
 
 
 # Define category mappings
@@ -34,7 +36,7 @@ def analyze_query_with_gemini(user_input):
     """
     print(prompt)
     try:
-        model = genai.GenerativeModel("gemini-1.5-pro")
+        model = genai.GenerativeModel("gemini-3-flash-preview")
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
@@ -76,7 +78,6 @@ def get_deal():
     if type(ai_response) == dict:
         if any(ai_response.get("greeting", "not found").lower().startswith(word) for word in
                ["hello", "hi", "hey", "thank you", "you're welcome!"]):
-            
             return jsonify({
                 "reply": ai_response.get("greeting", "hello"),
                 "options": list(category_mappings.values())
@@ -96,7 +97,7 @@ def get_deal():
                 f"<tr>"
                 f"<td>{d.get('brand', 'Unknown')}</td>"
                 f"<td>{d.get('product', 'N/A')}</td>"
-                f"<td>₹{str(d.get('price', 11000)).strip('₹')}</td>"
+                f"<td>₹{str(d.get('price', 0)).strip('₹')}</td>"
                 f"<td>{d.get('discount', 'N/A')}</td>"
                 f"<td>{d.get('rating', 'N/A')} ⭐</td>"
                 f"<td>{d.get('store', 'Unavailable')}</td>"
@@ -106,7 +107,7 @@ def get_deal():
         response += "</table>"
     else:
         response = "<p style='color: red; font-weight: bold;'>❌ No matching deals found. Try another query!</p>"
-    print(response)
+
     return jsonify({"reply": response})
 
 
