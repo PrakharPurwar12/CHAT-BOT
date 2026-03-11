@@ -1,13 +1,13 @@
 from flask import Flask, render_template, request, jsonify
 import json
 import google.generativeai as genai
-# import os
+import os
 
 
 app = Flask(__name__)
 
 # Configure Google Gemini API Key
-genai.configure(api_key="AIzaSyDzcFCqmAyLICIVTORsKwpdrbR7TMQzmPg")
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 # Define category mappings
@@ -50,18 +50,22 @@ def home():
     return render_template('index.html')
 
 def get_urls(data):
-    url = data.get('url', '')
+    url = data.get('urls', '')  # Changed from 'url' to 'urls' to match JSON response
     brand = data.get('brand', '')
     product = data.get('product', '')
     price = str(data.get('price', '')).strip("₹").replace(",", "")
     if "flipkart" in url.lower():
         url = "https://www.flipkart.com/search?q="+brand+"+"+product.replace(" ", "+") + "&p%5B%5D=facets.price_range.from%3D"+str(int(price)-10)+"&p%5B%5D=facets.price_range.to%3DMax"
+        print(url)
     elif "amazon" in url.lower():
         url = "https://www.amazon.in/s?k="+brand+"+"+product.replace(" ", "+") + "&low-price="+price
+        print(url)
     elif "reliancedigital" in url.lower():
         url = "https://www.reliancedigital.in/products?q=" +brand+"+"+product.replace(" ", "+") + "&min_price_effective=%5B" +str(int(price)-10) + ",INR%20TO%20"+str(int(price)+5000) +",INR%5D"
+        print(url)
     elif "croma" in url.lower():
         url = "https://www.croma.com/searchB?q=" +brand+"%20"+product.replace(" ", "%20") + "%3Arelevance&text="+ brand+"%20"+product.replace(" ", "%20")
+        print(url)
     return url
 @app.route('/get_deal', methods=['POST'])
 def get_deal():
@@ -109,8 +113,14 @@ def get_deal():
         response = "<p style='color: red; font-weight: bold;'>❌ No matching deals found. Try another query!</p>"
 
     return jsonify({"reply": response})
+            
+    response += "</table>"
+    # else:
+    #     response = "<p style='color: red; font-weight: bold;'>❌ No matching deals found. Try another query!</p>"
+
+    return jsonify({"reply": response})
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
     #get_deal()
